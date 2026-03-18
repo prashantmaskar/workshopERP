@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // The URL where your Node.js backend is running
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://workshoperpbakend.onrender.com/api';
 
 export const clientService = {
   // Create a new customer in the database
@@ -14,7 +14,7 @@ export const clientService = {
       throw error;
     }
   },
-  
+
   // Fetch all customers for dropdowns in Quotation/PO modules
   getClients: async () => {
     try {
