@@ -13,7 +13,7 @@ const Quotation = () => {
     useEffect(() => {
         const fetchClients = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/clients');
+                const response = await axios.get('https://workshoperpbakend.onrender.com/api/clients');
                 setClients(response.data);
             } catch (err) {
                 console.error("Error fetching clients:", err);

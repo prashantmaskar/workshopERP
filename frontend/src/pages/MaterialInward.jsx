@@ -16,7 +16,7 @@ const MaterialInward = () => {
 
   // 1. Fetch saved clients for the dropdown
   useEffect(() => {
-    axios.get('http://localhost:5000/api/clients')
+    axios.get('https://workshoperpbakend.onrender.com/api/clients')
       .then(res => setClients(res.data))
       .catch(err => console.error("Error fetching clients", err));
   }, []);
@@ -53,11 +53,11 @@ const MaterialInward = () => {
         {/* Customer Selection */}
         <div className="md:col-span-2">
           <label className="block text-sm font-bold text-gray-700 mb-1">Select Customer</label>
-          <select 
-            name="clientId" 
-            value={formData.clientId} 
-            onChange={handleChange} 
-            className="w-full border p-3 rounded-lg bg-gray-50" 
+          <select
+            name="clientId"
+            value={formData.clientId}
+            onChange={handleChange}
+            className="w-full border p-3 rounded-lg bg-gray-50"
             required
           >
             <option value="">-- Choose Customer --</option>

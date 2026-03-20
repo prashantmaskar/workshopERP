@@ -19,7 +19,7 @@ const PurchaseOrder = () => {
 
   // 1. Fetch Clients on component mount
   useEffect(() => {
-    axios.get('http://localhost:5000/api/clients')
+    axios.get('https://workshoperpbakend.onrender.com/api/clients')
       .then(res => setClients(res.data))
       .catch(err => console.error("Error fetching clients:", err));
   }, []);
@@ -28,10 +28,10 @@ const PurchaseOrder = () => {
   useEffect(() => {
     if (selectedClientId) {
       setLoading(true);
-      axios.get(`http://localhost:5000/api/quotations?clientId=${selectedClientId}`)
+      axios.get(`https://workshoperpbakend.onrender.com/api/quotations?clientId=${selectedClientId}`)
         .then(res => {
           // Filter to ensure we only show quotes for this specific client
-          const clientQuotes = res.data.filter(q => 
+          const clientQuotes = res.data.filter(q =>
             q.clientId?._id === selectedClientId || q.clientId === selectedClientId
           );
           setQuotations(clientQuotes);
@@ -50,7 +50,7 @@ const PurchaseOrder = () => {
   const handleQuoteChange = (e) => {
     const quoteId = e.target.value;
     const selectedQuote = quotations.find(q => q._id === quoteId);
-    
+
     if (selectedQuote) {
       setFormData({
         ...formData,
@@ -78,7 +78,7 @@ const PurchaseOrder = () => {
       };
 
       const response = await axios.post('http://localhost:5000/api/purchase-orders', payload);
-      
+
       if (response.status === 201) {
         alert("✅ PO Saved Successfully! You can now proceed to Material Inward.");
         // Reset Form
@@ -100,7 +100,7 @@ const PurchaseOrder = () => {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-        
+
         {/* Header */}
         <div className="bg-slate-900 p-6">
           <h2 className="text-2xl font-black text-white uppercase tracking-tight italic">
@@ -111,11 +111,11 @@ const PurchaseOrder = () => {
 
         <form onSubmit={handleSubmit} className="p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            
+
             {/* Client Selection */}
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Select Customer</label>
-              <select 
+              <select
                 className="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-indigo-500 outline-none transition-all bg-slate-50 font-bold"
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
@@ -129,7 +129,7 @@ const PurchaseOrder = () => {
             {/* Quotation Selection */}
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Link Quotation</label>
-              <select 
+              <select
                 className={`w-full border-2 p-3 rounded-xl outline-none transition-all font-bold ${!selectedClientId ? 'bg-gray-100' : 'bg-indigo-50 border-indigo-100 focus:border-indigo-500'}`}
                 value={formData.quotationId}
                 onChange={handleQuoteChange}
@@ -146,8 +146,8 @@ const PurchaseOrder = () => {
             {/* PO Details */}
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Customer PO Number</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-indigo-500 outline-none"
                 placeholder="e.g. PO/ABC/2026/001"
                 value={formData.poNumber}
@@ -158,8 +158,8 @@ const PurchaseOrder = () => {
 
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">PO Date</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 className="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-indigo-500 outline-none"
                 value={formData.poDate}
                 onChange={e => setFormData({...formData, poDate: e.target.value})}
@@ -210,8 +210,8 @@ const PurchaseOrder = () => {
             <p className="text-xs text-slate-400 italic max-w-sm">
               * By saving this PO, you are authorizing the system to accept material inwards for the above listed parts.
             </p>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="bg-green-600 text-white px-12 py-4 rounded-xl font-black shadow-lg hover:bg-green-700 hover:-translate-y-1 transition-all active:scale-95 uppercase tracking-widest"
             >
               Finalize & Save Purchase Order

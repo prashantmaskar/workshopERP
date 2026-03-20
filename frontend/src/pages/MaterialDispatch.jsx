@@ -8,7 +8,7 @@ const MaterialDispatch = () => {
 
     useEffect(() => {
         // Fetch inward logs to select what to dispatch
-        axios.get('http://localhost:5000/api/inward-list').then(res => setInwards(res.data));
+        axios.get('https://workshoperpbakend.onrender.com/api/inward-list').then(res => setInwards(res.data));
     }, []);
 
     const taxableValue = dispatchData.qty * dispatchData.rate;

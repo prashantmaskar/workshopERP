@@ -6,12 +6,12 @@ const InvoiceHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/invoices')
+    axios.get('https://workshoperpbakend.onrender.com/api/invoices')
       .then(res => setInvoices(res.data))
       .catch(err => console.error(err));
   }, []);
 
-  const filteredInvoices = invoices.filter(inv => 
+  const filteredInvoices = invoices.filter(inv =>
     inv.clientId?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     inv.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -20,9 +20,9 @@ const InvoiceHistory = () => {
     <div className="max-w-6xl mx-auto bg-white p-8 rounded-2xl shadow-xl border">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-black text-slate-800 uppercase italic">Invoice History (विक्री इतिहास)</h2>
-        <input 
-          type="text" 
-          placeholder="Search Customer or Inv No..." 
+        <input
+          type="text"
+          placeholder="Search Customer or Inv No..."
           className="border p-2 rounded-lg w-64 shadow-sm"
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -54,7 +54,7 @@ const InvoiceHistory = () => {
           ))}
         </tbody>
       </table>
-      
+
       {filteredInvoices.length === 0 && (
         <p className="text-center p-10 text-slate-400">No invoices found. Generate your first dispatch to see records here!</p>
       )}

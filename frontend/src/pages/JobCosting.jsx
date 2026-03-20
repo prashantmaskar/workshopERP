@@ -11,7 +11,7 @@ const JobCosting = () => {
 
   // 1. Fetch customers you saved in the first module
   useEffect(() => {
-    axios.get('http://localhost:5000/api/clients')
+    axios.get('https://workshoperpbakend.onrender.com/api/clients')
       .then(res => setClients(res.data))
       .catch(err => console.error("Error fetching clients", err));
   }, []);
@@ -30,7 +30,7 @@ const JobCosting = () => {
     const isInterState = client?.state !== 'Maharashtra';
 
     try {
-      const res = await axios.post('http://localhost:5000/api/calculate-quotation', {
+      const res = await axios.post('https://workshoperpbakend.onrender.com/api/calculate-quotation', {
         operations,
         material,
         profitPercent,
@@ -49,7 +49,7 @@ const JobCosting = () => {
       {/* Client Selection */}
       <div className="mb-6">
         <label className="block text-sm font-bold mb-2">Select Customer</label>
-        <select 
+        <select
           className="w-full border p-3 rounded-lg"
           onChange={(e) => setSelectedClient(e.target.value)}
         >
@@ -84,7 +84,7 @@ const JobCosting = () => {
       </div>
 
       {/* Action Button */}
-      <button 
+      <button
         onClick={handleCalculate}
         className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-700 transition"
       >
