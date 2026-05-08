@@ -43,7 +43,7 @@ export default function CustomerListPage() {
 
   const filteredItems = items.filter(item => 
     (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (item.email && item.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    (item.phone && item.phone.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -85,7 +85,7 @@ export default function CustomerListPage() {
             <TableHeader className="bg-secondary/20">
               <TableRow>
                 <TableHead className="pl-6">ID</TableHead>
-                <TableHead>Customer Name</TableHead>
+                <TableHead>Customer (Company) Name</TableHead>
                 <TableHead>Contact Info</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Reg. Date</TableHead>
@@ -108,10 +108,6 @@ export default function CustomerListPage() {
                     <TableCell className="font-semibold">{customer.name}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-xs">
-                          <Mail className="h-3 w-3 text-primary" />
-                          <span>{customer.email}</span>
-                        </div>
                         <div className="flex items-center gap-2 text-xs">
                           <Phone className="h-3 w-3 text-primary" />
                           <span>{customer.phone}</span>

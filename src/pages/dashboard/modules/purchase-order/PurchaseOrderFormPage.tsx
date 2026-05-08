@@ -20,6 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 import { purchaseOrderService } from '../../../../services/api';
 
+import { useQuotation } from '../../../../hooks/useQuotation';
+
 interface POItem {
   itemCode: string;
   description: string;
@@ -29,11 +31,26 @@ interface POItem {
   unit: string;
 }
 
+interface OperationItem {
+  name: string;
+  programNo: string;
+  cycleTime: string;
+}
+
 interface POFormValues {
   poNumber: string;
   supplierId: string;
+  quotationId?: string;
   orderDate: string;
-  expectedDeliveryDate: string;
+  customerName: string;
+  attendee: string;
+  partName: string;
+  partNumber: string;
+  hsnCode: string;
+  sgst: number;
+  cgst: number;
+  igst: number;
+  operations: OperationItem[];
   lineItems: POItem[];
   subtotal: number;
   tax: number;
@@ -54,23 +71,60 @@ export default function PurchaseOrderFormPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  const { fetchQuotations, items: quotations } = useQuotation();
+
   const { register, control, handleSubmit, watch, setValue } = useForm<POFormValues>({
     defaultValues: {
       poNumber: `PO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       orderDate: new Date().toISOString().split('T')[0],
       lineItems: [{ itemCode: '', description: '', quantity: 0, unitPrice: 0, total: 0, unit: 'pcs' }],
-      paymentTerms: '30 Days'
+      operations: [{ name: '', programNo: '', cycleTime: '' }],
+      paymentTerms: '30 Days',
+      sgst: 9,
+      cgst: 9,
+      igst: 0,
+      customerName: '',
+      attendee: '',
+      partName: '',
+      partNumber: ''
     }
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
     control,
     name: "lineItems"
   });
 
+  const { fields: opFields, append: appendOp, remove: removeOp } = useFieldArray({
+    control,
+    name: "operations"
+  });
+
+  React.useEffect(() => {
+    fetchQuotations();
+  }, [fetchQuotations]);
+
+  const watchedQuotationId = watch('quotationId');
+  React.useEffect(() => {
+    if (watchedQuotationId) {
+      const q = quotations.find(q => q.id === watchedQuotationId);
+      if (q) {
+        setValue('customerName', q.customer || '');
+        setValue('attendee', q.attainedBy || '');
+        setValue('partName', q.partName || '');
+        setValue('partNumber', q.partNumber || '');
+      }
+    }
+  }, [watchedQuotationId, quotations, setValue]);
+
   const watchedItems = watch('lineItems');
-  const subTotal = watchedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const taxAmount = subTotal * 0.18;
+  const watchedSgst = watch('sgst') || 0;
+  const watchedCgst = watch('cgst') || 0;
+  const watchedIgst = watch('igst') || 0;
+
+  const subTotal = watchedItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
+  const totalTaxPercent = Number(watchedSgst) + Number(watchedCgst) + Number(watchedIgst);
+  const taxAmount = subTotal * (totalTaxPercent / 100);
   const finalTotal = subTotal + taxAmount;
 
   const onSubmit = async (data: POFormValues) => {
@@ -121,7 +175,36 @@ export default function PurchaseOrderFormPage() {
             <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">PO Number</Label>
-                <Input {...register('poNumber')} readOnly className="bg-secondary/20 font-black text-xs h-12 border-border/50" />
+                <Input {...register('poNumber')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Link Quotation</Label>
+                <Select onValueChange={(val: any) => setValue('quotationId', val)}>
+                  <SelectTrigger className="h-12 rounded-xl border-border font-bold">
+                    <SelectValue placeholder="Select Quotation ID" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border">
+                    {quotations.map(q => (
+                      <SelectItem key={q.id} value={q.id} className="font-bold text-xs">{q.quoteNo} - {q.customer}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Customer Name</Label>
+                <Input {...register('customerName')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Attendee</Label>
+                <Input {...register('attendee')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Part Name</Label>
+                <Input {...register('partName')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Part Number</Label>
+                <Input {...register('partNumber')} className="h-12 rounded-xl border-border font-bold" />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Supplier Partner</Label>
@@ -141,8 +224,22 @@ export default function PurchaseOrderFormPage() {
                 <Input type="date" {...register('orderDate')} className="h-12 rounded-xl border-border font-bold" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Expected Delivery</Label>
-                <Input type="date" {...register('expectedDeliveryDate')} className="h-12 rounded-xl border-border font-bold" />
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">HSN Code</Label>
+                <Input {...register('hsnCode')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="grid grid-cols-3 gap-2 md:col-span-1">
+                <div className="space-y-1">
+                  <Label className="text-[8px] font-black uppercase opacity-60">SGST %</Label>
+                  <Input type="number" {...register('sgst')} className="h-10 rounded-lg border-border font-bold text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[8px] font-black uppercase opacity-60">CGST %</Label>
+                  <Input type="number" {...register('cgst')} className="h-10 rounded-lg border-border font-bold text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[8px] font-black uppercase opacity-60">IGST %</Label>
+                  <Input type="number" {...register('igst')} className="h-10 rounded-lg border-border font-bold text-xs" />
+                </div>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Payment Terms</Label>
@@ -166,8 +263,49 @@ export default function PurchaseOrderFormPage() {
 
           <Card className="rounded-3xl border-border bg-white shadow-sm border overflow-hidden">
             <div className="px-8 py-4 bg-secondary/10 flex items-center justify-between border-b border-border">
+              <h4 className="font-black text-sm uppercase tracking-widest opacity-60">Operation List</h4>
+              <Button type="button" size="sm" variant="outline" onClick={() => appendOp({ name: '', programNo: '', cycleTime: '' })} className="rounded-lg h-8 px-4 border-primary text-primary font-black text-[10px] uppercase tracking-widest hover:bg-primary/5">
+                <Plus className="h-3 w-3 mr-2" /> Add Operation
+              </Button>
+            </div>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-secondary/5 hover:bg-secondary/5 border-b border-border">
+                    <TableHead className="px-8 py-4 text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Operation Name</TableHead>
+                    <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Program No.</TableHead>
+                    <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Cycle Time</TableHead>
+                    <TableHead className="px-8"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {opFields.map((field, index) => (
+                    <TableRow key={field.id} className="border-b border-border last:border-0">
+                      <TableCell className="px-8 py-4">
+                        <Input {...register(`operations.${index}.name` as const)} placeholder="e.g. Drilling" className="h-10 rounded-lg font-bold text-xs" />
+                      </TableCell>
+                      <TableCell>
+                        <Input {...register(`operations.${index}.programNo` as const)} placeholder="PRG-100" className="h-10 rounded-lg font-bold text-xs" />
+                      </TableCell>
+                      <TableCell>
+                        <Input {...register(`operations.${index}.cycleTime` as const)} placeholder="2.5 mins" className="h-10 rounded-lg font-bold text-xs" />
+                      </TableCell>
+                      <TableCell className="px-8">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeOp(index)} className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-border bg-white shadow-sm border overflow-hidden">
+            <div className="px-8 py-4 bg-secondary/10 flex items-center justify-between border-b border-border">
               <h4 className="font-black text-sm uppercase tracking-widest opacity-60">Line Items</h4>
-              <Button type="button" size="sm" variant="outline" onClick={() => append({ itemCode: '', description: '', quantity: 0, unitPrice: 0, total: 0, unit: 'pcs' })} className="rounded-lg h-8 px-4 border-primary text-primary font-black text-[10px] uppercase tracking-widest hover:bg-primary/5">
+              <Button type="button" size="sm" variant="outline" onClick={() => appendItem({ itemCode: '', description: '', quantity: 0, unitPrice: 0, total: 0, unit: 'pcs' })} className="rounded-lg h-8 px-4 border-primary text-primary font-black text-[10px] uppercase tracking-widest hover:bg-primary/5">
                 <Plus className="h-3 w-3 mr-2" /> Add Item
               </Button>
             </div>
@@ -183,7 +321,7 @@ export default function PurchaseOrderFormPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {fields.map((field, index) => (
+                  {itemFields.map((field, index) => (
                     <TableRow key={field.id} className="border-b border-border last:border-0">
                       <TableCell className="px-8 py-4 space-y-2">
                         <Input {...register(`lineItems.${index}.itemCode` as const)} placeholder="SKU..." className="h-8 rounded-lg font-bold text-[10px]" />
@@ -209,7 +347,7 @@ export default function PurchaseOrderFormPage() {
                         ₹{(watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unitPrice || 0)}
                       </TableCell>
                       <TableCell className="px-8">
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -236,7 +374,7 @@ export default function PurchaseOrderFormPage() {
                 <span className="font-black">₹{subTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center bg-white/10 p-3 rounded-2xl">
-                <span className="text-xs font-black uppercase tracking-widest opacity-60">Est. Tax (GST 18%)</span>
+                <span className="text-xs font-black uppercase tracking-widest opacity-60">Est. Tax ({totalTaxPercent}%)</span>
                 <span className="font-black">₹{taxAmount.toFixed(2)}</span>
               </div>
               

@@ -25,8 +25,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 const operationSchema = z.object({
   operationName: z.string().min(1, "Required"),
-  rate: z.coerce.number().min(0),
-  timeSeconds: z.coerce.number().min(0),
+  rate: z.coerce.number().min(0).optional(),
+  timeSeconds: z.coerce.number().min(0).optional(),
+  amount: z.coerce.number().min(0).optional(),
 });
 
 const quotationSchema = z.object({
@@ -41,9 +42,11 @@ const quotationSchema = z.object({
   materialDetails: z.object({
     inputWeight: z.coerce.number().min(0),
     finishWeight: z.coerce.number().min(0),
+    totalWeight: z.coerce.number().min(0).optional(),
     scrapRecovery: z.coerce.number().min(0).max(100),
     scrapRate: z.coerce.number().min(0),
     profitPercent: z.coerce.number().min(0),
+    showScrapInReport: z.boolean().default(true),
   })
 });
 
@@ -83,15 +86,19 @@ export default function QuotationFormPage() {
   const watchedMaterial = watch("materialDetails");
 
   // Calculations
-  const calculateOpAmount = (rate: number, time: number) => {
+  const calculateOpAmount = (op: any) => {
+    if (op.amount !== undefined && op.amount > 0) return Number(op.amount);
+    const rate = op.rate || 0;
+    const time = op.timeSeconds || 0;
     return Number(((rate / 3600) * time).toFixed(2));
   };
 
-  const totalOpsAmount = watchedOperations.reduce((sum, op) => {
-    return sum + calculateOpAmount(op.rate, op.timeSeconds);
-  }, 0 || 0);
+  const totalOpsAmount = (watchedOperations || []).reduce((sum: number, op: any) => {
+    return sum + calculateOpAmount(op);
+  }, 0);
 
   const scrapWeight = Math.max(0, (watchedMaterial?.inputWeight || 0) - (watchedMaterial?.finishWeight || 0));
+  const totalWeight = (watchedMaterial?.inputWeight || 0) - (watchedMaterial?.finishWeight || 0);
   const scrapValue = (scrapWeight / 1000) * (watchedMaterial?.scrapRate || 0) * ((watchedMaterial?.scrapRecovery || 0) / 100);
   
   const subTotal = totalOpsAmount - scrapValue;
@@ -100,7 +107,11 @@ export default function QuotationFormPage() {
 
   const onSubmit = async (data: QuotationFormValues) => {
     const selectedCustomer = customers.find(c => c.id === data.customerId);
-    await createQuotation({ ...data, customerName: selectedCustomer?.name, total: finalTotal.toFixed(2) });
+    const materialWithTotal = {
+      ...data.materialDetails,
+      totalWeight: (data.materialDetails.inputWeight || 0) - (data.materialDetails.finishWeight || 0)
+    };
+    await createQuotation({ ...data, materialDetails: materialWithTotal, customerName: selectedCustomer?.name, total: finalTotal.toFixed(2) });
     navigate('/dashboard/modules/quotation');
   };
 
@@ -178,7 +189,7 @@ export default function QuotationFormPage() {
                     <TableHead className="px-8 py-4 text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Operation</TableHead>
                     <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Rate/Hr</TableHead>
                     <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Time (Sec)</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Amount</TableHead>
+                    <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Amount (Editable)</TableHead>
                     <TableHead className="px-8 border-b border-border"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -194,8 +205,14 @@ export default function QuotationFormPage() {
                       <TableCell>
                         <Input type="number" {...register(`operations.${index}.timeSeconds` as const)} className="h-10 w-24 rounded-lg font-bold text-xs" />
                       </TableCell>
-                      <TableCell className="font-black text-xs">
-                        ₹{calculateOpAmount(watchedOperations[index]?.rate || 0, watchedOperations[index]?.timeSeconds || 0)}
+                      <TableCell>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          {...register(`operations.${index}.amount` as const)} 
+                          placeholder={calculateOpAmount(watchedOperations[index] || {}).toString()}
+                          className="h-10 w-32 rounded-lg font-bold text-xs bg-secondary/5" 
+                        />
                       </TableCell>
                       <TableCell className="px-8">
                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50">
@@ -223,6 +240,12 @@ export default function QuotationFormPage() {
                 <Input type="number" {...register('materialDetails.finishWeight')} className="h-12 rounded-xl border-border font-bold" />
               </div>
               <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Total Weight (g)</Label>
+                <div className="h-12 rounded-xl border border-border bg-secondary/5 flex items-center px-4 font-black text-sm">
+                  {totalWeight}g
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Scrap Recovery %</Label>
                 <Input type="number" {...register('materialDetails.scrapRecovery')} className="h-12 rounded-xl border-border font-bold" />
               </div>
@@ -230,9 +253,23 @@ export default function QuotationFormPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Scrap Rate (₹/kg)</Label>
                 <Input type="number" {...register('materialDetails.scrapRate')} className="h-12 rounded-xl border-border font-bold" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Profit Margin %</Label>
-                <Input type="number" {...register('materialDetails.profitPercent')} className="h-12 rounded-xl border-border font-bold" />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="showScrapInReport" {...register('materialDetails.showScrapInReport')} className="rounded border-border text-primary" />
+                  <Label htmlFor="showScrapInReport" className="text-[10px] font-black uppercase tracking-widest opacity-60">Show Scrap in Report</Label>
+                </div>
+              </div>
+              <div className="space-y-2 flex flex-col justify-center">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Show Scrap in Report</Label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="showScrapInReport" 
+                    {...register('materialDetails.showScrapInReport')} 
+                    className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="showScrapInReport" className="text-xs font-bold">Enabled</Label>
+                </div>
               </div>
             </CardContent>
           </Card>

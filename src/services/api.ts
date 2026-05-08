@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,6 +25,18 @@ export const logisticsService = {
   createInward: (data: any) => api.post('/logistics/inward', data),
   getDispatch: () => api.get('/logistics/dispatch'),
   createDispatch: (data: any) => api.post('/logistics/dispatch', data),
+};
+
+export const customerService = {
+  getAll: () => api.get('/customers'),
+  getById: (id: string) => api.get(`/customers/${id}`),
+  create: (data: any) => api.post('/customers', data),
+};
+
+export const quotationService = {
+  getAll: () => api.get('/quotations'),
+  getById: (id: string) => api.get(`/quotations/${id}`),
+  create: (data: any) => api.post('/quotations', data),
 };
 
 export default api;

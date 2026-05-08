@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -12,54 +12,70 @@ import {
   User,
   Calendar,
   Layers,
-  Settings
+  Settings,
+  Loader2
 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
 import { cn } from '../../../../lib/utils';
-
-// Mock data fetch - in real app, fetch by id
-const getMockQuote = (id: string) => {
-  return {
-    id,
-    quoteNo: `QTN/2026/${id.padStart(4, '0')}`,
-    customer: 'Precision Machining Inc.',
-    attainedBy: 'John Doe',
-    partName: 'Gasket Seal V3',
-    date: '2026-05-01',
-    status: 'SENT',
-    materialDetails: {
-      inputWeightGrams: 450,
-      finishWeightGrams: 380,
-      scrapRecoveryPercent: 95,
-      scrapRate: 85,
-      profitPercent: 15
-    },
-    operations: [
-      { name: 'CNC Milling', ratePerHour: 1200, timeInSeconds: 120 },
-      { name: 'Surface Grinding', ratePerHour: 800, timeInSeconds: 60 },
-      { name: 'Deburring', ratePerHour: 400, timeInSeconds: 30 }
-    ]
-  };
-};
+import { quotationService } from '../../../../services/api';
 
 export default function QuotationViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const quote = getMockQuote(id || '0012');
+  const [quote, setQuote] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const calculateOpAmount = (rate: number, time: number) => (rate / 3600) * time;
+  useEffect(() => {
+    const fetchQuote = async () => {
+      try {
+        const response = await quotationService.getById(id!);
+        setQuote(response.data);
+      } catch (error) {
+        console.error('Error fetching quotation:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuote();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!quote) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold">Quotation not found</h2>
+        <Button onClick={() => navigate('/dashboard/modules/quotation')} className="mt-4">
+          Back to List
+        </Button>
+      </div>
+    );
+  }
+
+  const calculateOpAmount = (op: any) => {
+    if (op.amount !== undefined && op.amount > 0) return Number(op.amount);
+    const rate = op.rate || 0;
+    const time = op.timeSeconds || 0;
+    return (rate / 3600) * time;
+  };
   
-  const totalOpsAmount = quote.operations.reduce((sum, op) => 
-    sum + calculateOpAmount(op.ratePerHour, op.timeInSeconds), 0
+  const totalOpsAmount = (quote.operations || []).reduce((sum: number, op: any) => 
+    sum + calculateOpAmount(op), 0
   );
 
-  const scrapWeight = Math.max(0, quote.materialDetails.inputWeightGrams - quote.materialDetails.finishWeightGrams);
-  const scrapValue = (scrapWeight / 1000) * quote.materialDetails.scrapRate * (quote.materialDetails.scrapRecoveryPercent / 100);
+  const scrapWeight = Math.max(0, (quote.materialDetails?.inputWeight || 0) - (quote.materialDetails?.finishWeight || 0));
+  const scrapValue = (scrapWeight / 1000) * (quote.materialDetails?.scrapRate || 0) * ((quote.materialDetails?.scrapRecovery || 0) / 100);
   
   const subTotal = totalOpsAmount - scrapValue;
-  const profitAmount = subTotal * (quote.materialDetails.profitPercent / 100);
+  const profitAmount = subTotal * ((quote.materialDetails?.profitPercent || 0) / 100);
   const finalTotal = subTotal + profitAmount;
 
   return (
@@ -80,8 +96,8 @@ export default function QuotationViewPage() {
               <h1 className="text-4xl font-black tracking-tighter text-foreground">{quote.quoteNo}</h1>
               <span className={cn(
                 "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
-                quote.status === 'SENT' ? "bg-green-100 text-green-700" :
-                quote.status === 'DRAFT' ? "bg-orange-100 text-orange-700" :
+                quote.status === 'Sent' ? "bg-green-100 text-green-700" :
+                quote.status === 'Draft' ? "bg-orange-100 text-orange-700" :
                 "bg-blue-100 text-blue-700"
               )}>
                 {quote.status}
@@ -116,17 +132,13 @@ export default function QuotationViewPage() {
                     <Settings className="h-10 w-10 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black tracking-tighter">OMNI PRECISION</h2>
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Manufacturing & Engineering Solutions</p>
+                    <h2 className="text-2xl font-black tracking-tighter text-primary">ERP FORGE TECH</h2>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Industrial Manufacturing Solutions</p>
                   </div>
                 </div>
                 <div className="text-right space-y-1">
                   <p className="text-xs font-black uppercase tracking-widest opacity-60">Issue Date</p>
-                  <p className="text-lg font-black">{quote.date}</p>
-                  <div className="pt-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Valid Until</p>
-                    <p className="text-sm font-bold">2026-06-01</p>
-                  </div>
+                  <p className="text-lg font-black">{new Date(quote.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
@@ -135,25 +147,27 @@ export default function QuotationViewPage() {
                 <div className="space-y-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Quoted To</p>
                   <div className="space-y-1">
-                    <h4 className="text-xl font-black tracking-tight">{quote.customer}</h4>
+                    <h4 className="text-xl font-black tracking-tight">{quote.customerName}</h4>
                     <p className="text-sm font-medium opacity-60">Manufacturing Division</p>
-                    <p className="text-sm opacity-60">Plot 124, Industrial Area Phase II,</p>
-                    <p className="text-sm opacity-60">Chakan, Pune 410501</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Component Specification</p>
                   <div className="space-y-1">
                     <h4 className="text-xl font-black tracking-tight text-primary">{quote.partName}</h4>
-                    <p className="text-sm font-medium opacity-60">Attained By: {quote.attainedBy}</p>
+                    <p className="text-sm font-medium opacity-60">Attained By: {quote.attainedName}</p>
                     <div className="flex gap-4 mt-2">
                       <div>
                         <p className="text-[10px] font-black uppercase opacity-40">In Wt</p>
-                        <p className="text-sm font-bold">{quote.materialDetails.inputWeightGrams}g</p>
+                        <p className="text-sm font-bold">{quote.materialDetails?.inputWeight}g</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-black uppercase opacity-40">Out Wt</p>
-                        <p className="text-sm font-bold">{quote.materialDetails.finishWeightGrams}g</p>
+                        <p className="text-sm font-bold">{quote.materialDetails?.finishWeight}g</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase opacity-40">Total Wt</p>
+                        <p className="text-sm font-bold">{(quote.materialDetails?.inputWeight || 0) - (quote.materialDetails?.finishWeight || 0)}g</p>
                       </div>
                     </div>
                   </div>
@@ -170,16 +184,16 @@ export default function QuotationViewPage() {
                         <TableHead className="px-8 py-4 text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Step</TableHead>
                         <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Labor Rate</TableHead>
                         <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Cycle Time</TableHead>
-                        <TableHead className="px-8 text-right text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Subtotal</TableHead>
+                        <TableHead className="px-8 text-right text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Amount</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {quote.operations.map((op, idx) => (
+                      {quote.operations?.map((op: any, idx: number) => (
                         <TableRow key={idx} className="border-b border-border/50 last:border-0 h-16">
-                          <td className="px-8 font-black text-xs">{op.name}</td>
-                          <td className="font-bold text-xs opacity-60">₹{op.ratePerHour}/hr</td>
-                          <td className="font-bold text-xs opacity-60">{op.timeInSeconds} sec</td>
-                          <td className="px-8 text-right font-black text-sm">₹{calculateOpAmount(op.ratePerHour, op.timeInSeconds).toFixed(2)}</td>
+                          <td className="px-8 font-black text-xs">{op.operationName}</td>
+                          <td className="font-bold text-xs opacity-60">₹{op.rate}/hr</td>
+                          <td className="font-bold text-xs opacity-60">{op.timeSeconds} sec</td>
+                          <td className="px-8 text-right font-black text-sm">₹{calculateOpAmount(op).toFixed(2)}</td>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -194,17 +208,19 @@ export default function QuotationViewPage() {
                     <span className="font-black uppercase tracking-widest opacity-40">Operations Total</span>
                     <span className="font-black">₹{totalOpsAmount.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-black uppercase tracking-widest opacity-40">Scrap Credit ({scrapWeight}g)</span>
-                    <span className="font-black text-green-600">-₹{scrapValue.toFixed(2)}</span>
-                  </div>
+                  {quote.materialDetails?.showScrapInReport !== false && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-black uppercase tracking-widest opacity-40">Scrap Credit ({scrapWeight}g)</span>
+                      <span className="font-black text-green-600">-₹{scrapValue.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="h-px bg-border my-4" />
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-black uppercase tracking-widest opacity-40">Subtotal</span>
                     <span className="text-lg font-black">₹{subTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-black uppercase tracking-widest opacity-40">Profit Margin ({quote.materialDetails.profitPercent}%)</span>
+                    <span className="font-black uppercase tracking-widest opacity-40">Profit Margin ({quote.materialDetails?.profitPercent}%)</span>
                     <span className="font-black text-primary">₹{profitAmount.toFixed(2)}</span>
                   </div>
                   <div className="pt-6">
@@ -230,8 +246,8 @@ export default function QuotationViewPage() {
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest leading-none">Quote Created</p>
-                    <p className="text-[10px] font-bold opacity-40 mt-1">May 1, 2026 • 10:45 AM</p>
+                    <p className="text-xs font-black uppercase tracking-widest leading-none">Draft Created</p>
+                    <p className="text-[10px] font-bold opacity-40 mt-1">{new Date(quote.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -239,38 +255,15 @@ export default function QuotationViewPage() {
                     <Clock className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest leading-none">Sent to Customer</p>
-                    <p className="text-[10px] font-bold opacity-40 mt-1">May 2, 2026 • 02:30 PM</p>
+                    <p className="text-xs font-black uppercase tracking-widest leading-none">Current Status</p>
+                    <p className="text-[10px] font-bold opacity-40 mt-1">{quote.status}</p>
                   </div>
-                </div>
-                <div className="flex gap-4 opacity-40">
-                  <div className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                    <AlertCircle className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest leading-none">Awaiting Acceptance</p>
-                    <p className="text-[10px] font-bold mt-1">Pending verification</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-8 border-t border-border">
-              <h4 className="font-black text-sm uppercase tracking-widest opacity-60 mb-4">Quick Stats</h4>
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="bg-secondary/20 p-4 rounded-2xl">
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Items</p>
-                  <p className="text-xl font-black">12</p>
-                </div>
-                <div className="bg-secondary/20 p-4 rounded-2xl">
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Ops</p>
-                  <p className="text-xl font-black">{quote.operations.length}</p>
                 </div>
               </div>
             </div>
           </Card>
 
-          <Button variant="outline" className="w-full rounded-2xl h-14 font-black uppercase tracking-widest text-[10px]">
+          <Button variant="outline" className="w-full rounded-2xl h-14 font-black uppercase tracking-widest text-[10px]" onClick={() => navigate(`/dashboard/modules/quotation/${id}/edit`)}>
             Edit Quotation
           </Button>
         </div>

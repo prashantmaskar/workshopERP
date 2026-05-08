@@ -18,9 +18,9 @@ export const useCustomer = () => {
       dispatch(setError(err.message));
       // Fallback for demo
       const mockCustomers = [
-        { id: 'CUST-001', name: 'ABC Manufacturing', email: 'contact@abc.com', phone: '1234567890', city: 'Mumbai', state: 'Maharashtra', date: '2024-05-01' },
-        { id: 'CUST-002', name: 'Global Tech', email: 'info@globaltech.com', phone: '9876543210', city: 'Bangalore', state: 'Karnataka', date: '2024-04-15' },
-        { id: 'CUST-003', name: 'Precision Parts Ltd', email: 'sales@precision.com', phone: '5550123456', city: 'Pune', state: 'Maharashtra', date: '2024-03-20' },
+        { id: 'CUST-001', name: 'ABC Manufacturing', phone: '1234567890', city: 'Mumbai', state: 'Maharashtra', date: '2024-05-01' },
+        { id: 'CUST-002', name: 'Global Tech', phone: '9876543210', city: 'Bangalore', state: 'Karnataka', date: '2024-04-15' },
+        { id: 'CUST-003', name: 'Precision Parts Ltd', phone: '5550123456', city: 'Pune', state: 'Maharashtra', date: '2024-03-20' },
       ];
       dispatch(setItems(mockCustomers));
     } finally {

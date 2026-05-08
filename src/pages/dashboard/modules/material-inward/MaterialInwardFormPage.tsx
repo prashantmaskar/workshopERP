@@ -18,33 +18,66 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 import { logisticsService } from '../../../../services/api';
 
+import { useCustomer } from '../../../../hooks/useCustomer';
+import { useQuotation } from '../../../../hooks/useQuotation';
+
 interface InwardFormValues {
   inwardNumber: string;
   poNumber: string;
+  customerId: string;
+  partName: string;
+  inwardType: 'Forging' | 'Rework' | 'Direct' | 'Other';
+  challanQuantity: number;
   receivedDate: string;
   receivedQuantity: number;
+  shortageQuantity: number;
   warehouseLocation: 'Main' | 'Secondary' | 'Vault' | 'Staging';
   qcRemarks: string;
   qcStatus: 'Pass' | 'Fail' | 'On Hold';
   receivedBy: string;
   qcInspectedBy: string;
+  driverName: string;
+  vehicleNumber: string;
 }
 
+const inwardTypes = ['Forging', 'Rework', 'Direct', 'Other'];
 const warehouseLocations = ['Main', 'Secondary', 'Vault', 'Staging'];
 const qcStatuses = ['Pass', 'Fail', 'On Hold'];
 
 export default function MaterialInwardFormPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { fetchCustomers, items: customers } = useCustomer();
+  const { fetchQuotations, items: quotations } = useQuotation();
 
-  const { register, handleSubmit, setValue } = useForm<InwardFormValues>({
+  const { register, handleSubmit, setValue, watch } = useForm<InwardFormValues>({
     defaultValues: {
       inwardNumber: `INW-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       receivedDate: new Date().toISOString().split('T')[0],
       qcStatus: 'Pass',
-      warehouseLocation: 'Main'
+      warehouseLocation: 'Main',
+      inwardType: 'Forging',
+      challanQuantity: 0,
+      receivedQuantity: 0,
+      shortageQuantity: 0
     }
   });
+
+  React.useEffect(() => {
+    fetchCustomers();
+    fetchQuotations();
+  }, [fetchCustomers, fetchQuotations]);
+
+  const watchedCustomerId = watch('customerId');
+  const watchedChallanQty = watch('challanQuantity');
+  const watchedReceivedQty = watch('receivedQuantity');
+
+  const filteredParts = quotations.filter(q => q.customerId === watchedCustomerId || q.customer === customers.find(c => c.id === watchedCustomerId)?.name);
+
+  React.useEffect(() => {
+    const shortage = (watchedChallanQty || 0) - (watchedReceivedQty || 0);
+    setValue('shortageQuantity', shortage > 0 ? shortage : 0);
+  }, [watchedChallanQty, watchedReceivedQty, setValue]);
 
   const onSubmit = async (data: InwardFormValues) => {
     try {
@@ -88,16 +121,68 @@ export default function MaterialInwardFormPage() {
                 <Input {...register('inwardNumber')} readOnly className="bg-secondary/20 font-black text-xs h-12 border-border/50" />
               </div>
               <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Customer *</Label>
+                <Select onValueChange={(val: any) => setValue('customerId', val)}>
+                  <SelectTrigger className="h-12 rounded-xl border-border font-bold">
+                    <SelectValue placeholder="Select Customer" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border">
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id} className="font-bold text-xs">{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Part Name *</Label>
+                <Select onValueChange={(val: any) => {
+                  const q = quotations.find(item => item.id === val);
+                  if (q) {
+                    setValue('partName', q.partName);
+                  }
+                }}>
+                  <SelectTrigger className="h-12 rounded-xl border-border font-bold" disabled={!watchedCustomerId}>
+                    <SelectValue placeholder="Select Part" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border">
+                    {filteredParts.map(p => (
+                      <SelectItem key={p.id} value={p.id} className="font-bold text-xs">{p.partName} {p.partNumber ? `(${p.partNumber})` : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">PO Number (Ref)</Label>
                 <Input {...register('poNumber')} placeholder="PO-2024-1234" className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Inward Type</Label>
+                <Select onValueChange={(val: any) => setValue('inwardType', val)} defaultValue="Forging">
+                  <SelectTrigger className="h-12 rounded-xl border-border font-bold">
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border">
+                    {inwardTypes.map(type => (
+                      <SelectItem key={type} value={type} className="font-bold text-xs">{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Received Date</Label>
                 <Input type="date" {...register('receivedDate')} className="h-12 rounded-xl border-border font-bold" />
               </div>
               <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Challan Quantity</Label>
+                <Input type="number" {...register('challanQuantity')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Received Quantity</Label>
                 <Input type="number" {...register('receivedQuantity')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Shortage Quantity</Label>
+                <Input type="number" {...register('shortageQuantity')} readOnly className="h-12 rounded-xl border-border font-bold bg-secondary/10" />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Warehouse Location</Label>
@@ -111,6 +196,14 @@ export default function MaterialInwardFormPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Driver Name *</Label>
+                <Input {...register('driverName')} required placeholder="Driver's Name" className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Vehicle Number *</Label>
+                <Input {...register('vehicleNumber')} required placeholder="MH-12-XX-0000" className="h-12 rounded-xl border-border font-bold" />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Received By</Label>

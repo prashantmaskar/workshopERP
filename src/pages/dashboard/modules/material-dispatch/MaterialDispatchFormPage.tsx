@@ -18,48 +18,73 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 import { logisticsService } from '../../../../services/api';
 
+import { useCustomer } from '../../../../hooks/useCustomer';
+
 interface DispatchFormValues {
   dispatchNumber: string;
+  dispatchType: 'Invoice' | 'Delivery';
   customerId: string;
   customerName: string;
-  itemId: string;
   itemDescription: string;
   dispatchQuantity: number;
   dispatchDate: string;
+  rate?: number;
+  gstAmount?: number;
   transportMode: 'Road' | 'Rail' | 'Air' | 'Sea';
   vehicleNumber: string;
   driverName: string;
   driverPhone: string;
   trackingNumber: string;
-  expectedDeliveryDate: string;
   specialInstructions: string;
   status: string;
 }
 
-const customers = [
-  { id: '1', name: 'ABC Manufacturing' },
-  { id: '2', name: 'Global Motors' },
-  { id: '3', name: 'Precision Machining Inc.' },
-];
-
+const dispatchTypes = ['Invoice', 'Delivery'];
 const transportModes = ['Road', 'Rail', 'Air', 'Sea'];
 
 export default function MaterialDispatchFormPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [inwardLots, setInwardLots] = useState<any[]>([]);
+  const { fetchCustomers, items: customers } = useCustomer();
 
-  const { register, handleSubmit, setValue } = useForm<DispatchFormValues>({
+  const { register, handleSubmit, setValue, watch } = useForm<DispatchFormValues>({
     defaultValues: {
       dispatchNumber: `DSP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       dispatchDate: new Date().toISOString().split('T')[0],
-      transportMode: 'Road',
+      transportMode: (localStorage.getItem('last_transportMode') as any) || 'Road',
+      vehicleNumber: localStorage.getItem('last_vehicleNumber') || '',
+      driverName: localStorage.getItem('last_driverName') || '',
+      driverPhone: localStorage.getItem('last_driverPhone') || '',
+      dispatchType: 'Invoice',
       status: 'Pending'
     }
   });
 
+  React.useEffect(() => {
+    fetchCustomers();
+    logisticsService.getInward().then(res => setInwardLots(res.data)).catch(console.error);
+  }, [fetchCustomers]);
+
+  const watchedDispatchType = watch('dispatchType');
+  const watchedCustomerId = watch('customerId');
+  const watchedItemDesc = watch('itemDescription');
+
+  // FIFO Suggestion
+  const matchingLots = inwardLots.filter(lot => 
+    lot.customerId === watchedCustomerId && 
+    lot.partName?.toLowerCase().includes(watchedItemDesc?.toLowerCase())
+  ).sort((a, b) => new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime());
+
   const onSubmit = async (data: DispatchFormValues) => {
     try {
       setLoading(true);
+      // Persist transport info
+      localStorage.setItem('last_transportMode', data.transportMode);
+      localStorage.setItem('last_vehicleNumber', data.vehicleNumber);
+      localStorage.setItem('last_driverName', data.driverName);
+      localStorage.setItem('last_driverPhone', data.driverPhone);
+
       const selectedCustomer = customers.find(c => c.id === data.customerId);
       const submissionData = { ...data, customerName: selectedCustomer?.name };
       
@@ -102,6 +127,19 @@ export default function MaterialDispatchFormPage() {
                 <Input {...register('dispatchNumber')} readOnly className="bg-secondary/20 font-black text-xs h-12 border-border/50" />
               </div>
               <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Dispatch Type</Label>
+                <Select onValueChange={(val: any) => setValue('dispatchType', val)} defaultValue="Invoice">
+                  <SelectTrigger className="h-12 rounded-xl border-border font-bold">
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border">
+                    {dispatchTypes.map(type => (
+                      <SelectItem key={type} value={type} className="font-bold text-xs">{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Customer</Label>
                 <Select onValueChange={(val: any) => setValue('customerId', val)}>
                   <SelectTrigger className="h-12 rounded-xl border-border font-bold">
@@ -118,10 +156,18 @@ export default function MaterialDispatchFormPage() {
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Dispatch Date</Label>
                 <Input type="date" {...register('dispatchDate')} className="h-12 rounded-xl border-border font-bold" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Expected Delivery</Label>
-                <Input type="date" {...register('expectedDeliveryDate')} className="h-12 rounded-xl border-border font-bold" />
-              </div>
+              {watchedDispatchType === 'Invoice' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Rate</Label>
+                    <Input type="number" {...register('rate')} placeholder="Price per unit" className="h-12 rounded-xl border-border font-bold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">GST Amount</Label>
+                    <Input type="number" {...register('gstAmount')} placeholder="Tax amount" className="h-12 rounded-xl border-border font-bold" />
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -130,9 +176,22 @@ export default function MaterialDispatchFormPage() {
               <h4 className="font-black text-sm uppercase tracking-widest opacity-60">Item & Transport</h4>
             </div>
             <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Item Description</Label>
-                <Input {...register('itemDescription')} placeholder="e.g. MS Plate 10mm" className="h-12 rounded-xl border-border font-bold" />
+                <Input {...register('itemDescription')} placeholder="e.g. Engine Valve" className="h-12 rounded-xl border-border font-bold" />
+                {matchingLots.length > 0 && (
+                  <div className="mt-2 p-3 bg-secondary/5 border border-dashed border-border rounded-xl">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2 font-mono text-primary">FIFO Recommendation (Stock Lots)</p>
+                    <div className="space-y-1">
+                      {matchingLots.slice(0, 3).map((lot, i) => (
+                        <div key={lot.id} className="text-[10px] font-bold flex justify-between">
+                          <span>Lot: {lot.inwardNumber} ({new Date(lot.receivedDate).toLocaleDateString()})</span>
+                          <span>Stock: {lot.receivedQuantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Dispatch Quantity</Label>
