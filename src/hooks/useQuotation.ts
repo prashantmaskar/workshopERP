@@ -18,9 +18,9 @@ export const useQuotation = () => {
       dispatch(setError(err.message));
       // Fallback for demo
       const mockQuotes = [
-        { id: '1', quoteNo: 'PI/QTN/2026/0001', customer: 'ABC Manufacturing', attainedBy: 'John Admin', partName: 'Engine Valve', date: '2026-05-01', total: '12,450' },
-        { id: '2', quoteNo: 'PI/QTN/2026/0002', customer: 'Global Tech', attainedBy: 'Sarah Staff', partName: 'Cylinder Block', date: '2026-05-04', total: '45,000' },
-        { id: '3', quoteNo: 'PI/QTN/2026/0003', customer: 'Precision Parts', attainedBy: 'John Admin', partName: 'Gear Shaft', date: '2026-05-05', total: '8,320' },
+        { id: '1', quoteNo: 'PI/QTN/2026-27/0001', customer: 'ABC Manufacturing', attainedBy: 'John Admin', partName: 'Engine Valve', partNumber: 'PN-EV-100', date: '2026-05-01', total: '12,450' },
+        { id: '2', quoteNo: 'PI/QTN/2026-27/0002', customer: 'Global Tech', attainedBy: 'Sarah Staff', partName: 'Cylinder Block', partNumber: 'PN-CB-204', date: '2026-05-04', total: '45,000' },
+        { id: '3', quoteNo: 'PI/QTN/2026-27/0003', customer: 'Precision Parts', attainedBy: 'John Admin', partName: 'Gear Shaft', partNumber: 'PN-GS-501', date: '2026-05-05', total: '8,320' },
       ];
       dispatch(setItems(mockQuotes));
     } finally {

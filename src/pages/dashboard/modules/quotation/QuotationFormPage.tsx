@@ -64,7 +64,7 @@ export default function QuotationFormPage() {
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<any>({
     resolver: zodResolver(quotationSchema),
     defaultValues: {
-      quoteNo: `PI/QTN/2026/${Math.floor(1000 + Math.random() * 9000)}`,
+      quoteNo: `PI/QTN/2026-27/${Math.floor(1000 + Math.random() * 9000)}`,
       attainedName: 'John Admin',
       operations: [{ operationName: 'Milling', rate: 450, timeSeconds: 120 }],
       materialDetails: {
@@ -252,6 +252,10 @@ export default function QuotationFormPage() {
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Scrap Rate (₹/kg)</Label>
                 <Input type="number" {...register('materialDetails.scrapRate')} className="h-12 rounded-xl border-border font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Profit Percentage (%)</Label>
+                <Input type="number" {...register('materialDetails.profitPercent')} className="h-12 rounded-xl border-border font-bold text-primary" />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-2">

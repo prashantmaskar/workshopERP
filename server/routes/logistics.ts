@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { MaterialInward, MaterialDispatch } from '../models/Logistics.js';
+import { MaterialInward, MaterialDispatch } from '../models/Logistics.ts';
 
 const router = Router();
 

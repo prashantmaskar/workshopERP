@@ -1,22 +1,22 @@
 import { Router } from 'express';
-import { Supplier } from '../models/BaseModels.ts';
+import { Customer } from '../models/BaseModels.ts';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const suppliers = await Supplier.find();
-    res.json(suppliers);
+    const customers = await Customer.find().sort({ customerName: 1 });
+    res.json(customers);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
 });
 
 router.post('/', async (req, res) => {
-  const supplier = new Supplier(req.body);
+  const customer = new Customer(req.body);
   try {
-    const newSupplier = await supplier.save();
-    res.status(201).json(newSupplier);
+    const saved = await customer.save();
+    res.status(201).json(saved);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }

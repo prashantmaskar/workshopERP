@@ -39,7 +39,6 @@ interface OperationItem {
 
 interface POFormValues {
   poNumber: string;
-  supplierId: string;
   quotationId?: string;
   orderDate: string;
   customerName: string;
@@ -51,19 +50,12 @@ interface POFormValues {
   cgst: number;
   igst: number;
   operations: OperationItem[];
-  lineItems: POItem[];
   subtotal: number;
   tax: number;
   totalAmount: number;
   notes: string;
   paymentTerms: 'COD' | '15 Days' | '30 Days' | '45 Days' | 'Advance';
 }
-
-const suppliers = [
-  { id: '1', name: 'Steel Suppliers Ltd' },
-  { id: '2', name: 'Precision Tools Co.' },
-  { id: '3', name: 'Hardware Solutions' },
-];
 
 const units = ['pcs', 'box', 'kg', 'meter', 'liter'];
 
@@ -75,9 +67,8 @@ export default function PurchaseOrderFormPage() {
 
   const { register, control, handleSubmit, watch, setValue } = useForm<POFormValues>({
     defaultValues: {
-      poNumber: `PO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      poNumber: `PO-2026-27-${Math.floor(100 + Math.random() * 900)}`,
       orderDate: new Date().toISOString().split('T')[0],
-      lineItems: [{ itemCode: '', description: '', quantity: 0, unitPrice: 0, total: 0, unit: 'pcs' }],
       operations: [{ name: '', programNo: '', cycleTime: '' }],
       paymentTerms: '30 Days',
       sgst: 9,
@@ -86,13 +77,9 @@ export default function PurchaseOrderFormPage() {
       customerName: '',
       attendee: '',
       partName: '',
-      partNumber: ''
+      partNumber: '',
+      subtotal: 0
     }
-  });
-
-  const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
-    control,
-    name: "lineItems"
   });
 
   const { fields: opFields, append: appendOp, remove: removeOp } = useFieldArray({
@@ -117,12 +104,12 @@ export default function PurchaseOrderFormPage() {
     }
   }, [watchedQuotationId, quotations, setValue]);
 
-  const watchedItems = watch('lineItems');
+  const watchedSubtotal = watch('subtotal') || 0;
   const watchedSgst = watch('sgst') || 0;
   const watchedCgst = watch('cgst') || 0;
   const watchedIgst = watch('igst') || 0;
 
-  const subTotal = watchedItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
+  const subTotal = Number(watchedSubtotal);
   const totalTaxPercent = Number(watchedSgst) + Number(watchedCgst) + Number(watchedIgst);
   const taxAmount = subTotal * (totalTaxPercent / 100);
   const finalTotal = subTotal + taxAmount;
@@ -130,10 +117,8 @@ export default function PurchaseOrderFormPage() {
   const onSubmit = async (data: POFormValues) => {
     try {
       setLoading(true);
-      const selectedSupplier = suppliers.find(s => s.id === data.supplierId);
       const submissionData = {
         ...data,
-        supplierName: selectedSupplier?.name,
         subtotal: subTotal,
         tax: taxAmount,
         totalAmount: finalTotal
@@ -178,14 +163,14 @@ export default function PurchaseOrderFormPage() {
                 <Input {...register('poNumber')} className="h-12 rounded-xl border-border font-bold" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Link Quotation</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Select Part Number</Label>
                 <Select onValueChange={(val: any) => setValue('quotationId', val)}>
                   <SelectTrigger className="h-12 rounded-xl border-border font-bold">
-                    <SelectValue placeholder="Select Quotation ID" />
+                    <SelectValue placeholder="Search Part Number" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-border">
                     {quotations.map(q => (
-                      <SelectItem key={q.id} value={q.id} className="font-bold text-xs">{q.quoteNo} - {q.customer}</SelectItem>
+                      <SelectItem key={q.id} value={q.id} className="font-bold text-xs">{q.partNumber || q.quoteNo} - {q.partName}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -205,19 +190,6 @@ export default function PurchaseOrderFormPage() {
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Part Number</Label>
                 <Input {...register('partNumber')} className="h-12 rounded-xl border-border font-bold" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Supplier Partner</Label>
-                <Select onValueChange={(val: any) => setValue('supplierId', val)}>
-                  <SelectTrigger className="h-12 rounded-xl border-border font-bold">
-                    <SelectValue placeholder="Select Supplier" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border">
-                    {suppliers.map(s => (
-                      <SelectItem key={s.id} value={s.id} className="font-bold text-xs">{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Order Date</Label>
@@ -254,6 +226,12 @@ export default function PurchaseOrderFormPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-4 md:col-span-2">
+                <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10">
+                  <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Base Order Subtotal (₹)</Label>
+                  <Input type="number" {...register('subtotal')} className="h-14 rounded-xl border-border font-black text-2xl text-primary" placeholder="0.00" />
+                </div>
+              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Notes</Label>
                 <Input {...register('notes')} placeholder="Special instructions..." className="h-12 rounded-xl border-border font-bold" />
@@ -288,66 +266,10 @@ export default function PurchaseOrderFormPage() {
                         <Input {...register(`operations.${index}.programNo` as const)} placeholder="PRG-100" className="h-10 rounded-lg font-bold text-xs" />
                       </TableCell>
                       <TableCell>
-                        <Input {...register(`operations.${index}.cycleTime` as const)} placeholder="2.5 mins" className="h-10 rounded-lg font-bold text-xs" />
+                        <Input {...register(`operations.${index}.cycleTime` as const)} placeholder="120 secs" className="h-10 rounded-lg font-bold text-xs" />
                       </TableCell>
                       <TableCell className="px-8">
                         <Button type="button" variant="ghost" size="icon" onClick={() => removeOp(index)} className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl border-border bg-white shadow-sm border overflow-hidden">
-            <div className="px-8 py-4 bg-secondary/10 flex items-center justify-between border-b border-border">
-              <h4 className="font-black text-sm uppercase tracking-widest opacity-60">Line Items</h4>
-              <Button type="button" size="sm" variant="outline" onClick={() => appendItem({ itemCode: '', description: '', quantity: 0, unitPrice: 0, total: 0, unit: 'pcs' })} className="rounded-lg h-8 px-4 border-primary text-primary font-black text-[10px] uppercase tracking-widest hover:bg-primary/5">
-                <Plus className="h-3 w-3 mr-2" /> Add Item
-              </Button>
-            </div>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-secondary/5 hover:bg-secondary/5 border-b border-border">
-                    <TableHead className="px-8 py-4 text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Code / Desc</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Qty / Unit</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Unit Price</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Amount</TableHead>
-                    <TableHead className="px-8"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {itemFields.map((field, index) => (
-                    <TableRow key={field.id} className="border-b border-border last:border-0">
-                      <TableCell className="px-8 py-4 space-y-2">
-                        <Input {...register(`lineItems.${index}.itemCode` as const)} placeholder="SKU..." className="h-8 rounded-lg font-bold text-[10px]" />
-                        <Input {...register(`lineItems.${index}.description` as const)} placeholder="Item description..." className="h-10 rounded-lg font-bold text-xs" />
-                      </TableCell>
-                      <TableCell className="space-y-2">
-                        <Input type="number" {...register(`lineItems.${index}.quantity` as const)} className="h-10 w-24 rounded-lg font-bold text-xs" />
-                        <Select onValueChange={(val: any) => setValue(`lineItems.${index}.unit`, val)} defaultValue="pcs">
-                          <SelectTrigger className="h-8 w-24 rounded-lg border-border font-bold text-[10px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {units.map(u => (
-                              <SelectItem key={u} value={u} className="text-[10px] font-bold">{u}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input type="number" {...register(`lineItems.${index}.unitPrice` as const)} className="h-10 w-24 rounded-lg font-bold text-xs" />
-                      </TableCell>
-                      <TableCell className="font-black text-xs">
-                        ₹{(watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unitPrice || 0)}
-                      </TableCell>
-                      <TableCell className="px-8">
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>

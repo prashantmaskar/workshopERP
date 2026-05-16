@@ -52,7 +52,7 @@ export default function MaterialInwardFormPage() {
 
   const { register, handleSubmit, setValue, watch } = useForm<InwardFormValues>({
     defaultValues: {
-      inwardNumber: `INW-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      inwardNumber: `GRN-2026-27-${Math.floor(1000 + Math.random() * 9000)}`,
       receivedDate: new Date().toISOString().split('T')[0],
       qcStatus: 'Pass',
       warehouseLocation: 'Main',
@@ -82,7 +82,10 @@ export default function MaterialInwardFormPage() {
   const onSubmit = async (data: InwardFormValues) => {
     try {
       setLoading(true);
-      await logisticsService.createInward(data);
+      await logisticsService.createInward({
+        ...data,
+        availableBalance: data.receivedQuantity
+      });
       navigate('/dashboard/modules/material-inward');
     } catch (error: any) {
       console.error('Failed to register inward:', error);

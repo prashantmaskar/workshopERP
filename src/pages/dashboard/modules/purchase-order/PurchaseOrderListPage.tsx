@@ -37,7 +37,8 @@ export default function PurchaseOrderListPage() {
 
   const filteredItems = pos.filter(item => 
     (item.poNumber && item.poNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (item.supplierName && item.supplierName.toLowerCase().includes(searchTerm.toLowerCase()))
+    (item.customerName && item.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (item.partName && item.partName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -74,8 +75,8 @@ export default function PurchaseOrderListPage() {
               <TableHeader>
                 <TableRow className="bg-secondary/5 hover:bg-secondary/5 border-b border-border">
                   <TableHead className="px-8 py-5 text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">PO Number</TableHead>
-                  <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Supplier Partner</TableHead>
-                  <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Issued Date</TableHead>
+                  <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Customer</TableHead>
+                  <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Part Name / No.</TableHead>
                   <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Order Status</TableHead>
                   <TableHead className="text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Total Value</TableHead>
                   <TableHead className="px-8 text-right text-[10px] uppercase font-black text-foreground/40 tracking-[0.2em]">Actions</TableHead>
@@ -85,8 +86,13 @@ export default function PurchaseOrderListPage() {
                 {filteredItems.map((po) => (
                   <TableRow key={po._id} className="hover:bg-background/50 transition-colors group border-b border-border/50 last:border-0">
                     <TableCell className="px-8 py-4 font-black text-xs text-primary">{po.poNumber}</TableCell>
-                    <TableCell className="font-black text-sm">{po.supplierName}</TableCell>
-                    <TableCell className="text-xs font-bold opacity-40">{new Date(po.orderDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-black text-sm">{po.customerName}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold">{po.partName}</span>
+                        <span className="text-[10px] font-black opacity-40">{po.partNumber}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <span className={cn(
                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
