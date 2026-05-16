@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Invoice, JobCosting } from '../models/Finance.ts';
+import { Invoice, JobCosting } from '../models/Finance.js';
 
 const router = Router();
 

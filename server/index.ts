@@ -5,12 +5,12 @@ import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import poRoutes from './routes/purchaseOrders.ts';
-import supplierRoutes from './routes/suppliers.ts';
-import logisticsRoutes from './routes/logistics.ts';
-import financeRoutes from './routes/finance.ts';
-import customerRoutes from './routes/customers.ts';
-import quotationRoutes from './routes/quotations.ts';
+import poRoutes from './server/routes/purchaseOrders.js';
+import supplierRoutes from './server/routes/suppliers.js';
+import logisticsRoutes from './server/routes/logistics.js';
+import financeRoutes from './server/routes/finance.js';
+import customerRoutes from './server/routes/customers.js';
+import quotationRoutes from './server/routes/quotations.js';
 
 dotenv.config();
 
@@ -51,10 +51,10 @@ async function startServer() {
 
   // API Routes
   app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
+    res.json({
+      status: 'ok',
       database: dbConnected ? 'connected' : 'error',
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString()
     });
   });
 

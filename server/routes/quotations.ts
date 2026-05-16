@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Quotation } from '../models/Quotation.ts';
+import { Quotation } from '../models/Quotation.js';
 
 const router = Router();
 
